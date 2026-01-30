@@ -55,3 +55,8 @@ export interface IOrderResponse {
   id: string;
   total: number;
 }
+
+export interface IValidationResult {
+  isValid: boolean;
+  errors: Record<keyof ICustomer, string>;
+} //Интерфейс для результатов валидации

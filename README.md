@@ -152,7 +152,7 @@ CartModel - класс, описывающий выбранные покупат
 `private _itemsInCart: IProduct[] = []` - массив сохраненных (положенных в корзину) товаров типа IProducts, по умолчанию пустой.
 Содержит методы:
 `get itemsInCart():IProduct[]` - геттер - добавляет в массив товар типа массив обьектов IProduct;
-`putItemsInCart (selectedProduct: IProduct): void` - кладет обьект или обьекты товара типа IProducts в массив \_itemsInCart, проверяя по id есть ли он уже с помощью метода hasItem, и можно ли его купить (price !== null);
+`putItemInCart (selectedProduct: IProduct): void` - кладет обьект или типа IProducts в массив \_itemsInCart, проверяя по id есть ли он уже с помощью метода hasItem, и можно ли его купить (price !== null);
 `deleteItemFromCart (selectedProduct: IProduct): IProduct[]` - удаляет из массива \_itemsInCart обьект продукта, отфильтровывая его с помощью .filter и возвращая отфильтрованный массив;
 `clearCart(): void` - очистить массив \_itemsInCart, удаляя из него все товары;
 `productsCount (): number` - возвращает общее число всех товаров в массиве \_itemsInCart;

@@ -8,9 +8,10 @@ import { ApiService } from "./components/Models/ApiService";
 import { API_URL } from "./utils/constants";
 
 // Проверка MainCatalogModel и его методов
-const catalog = new MainCatalogModel(apiProducts.items);
+const catalog = new MainCatalogModel(); //Поиск продукта по id на строке 18
+catalog.catalogProducts = apiProducts.items
 console.log("Это вывод всего каталога", catalog.catalogProducts);
-catalog.selectedProduct = "854cef69-976d-4c2a-a18c-2aa45046c390";
+catalog.selectedProduct = apiProducts.items[1];
 console.log("Это вывод выбранного продукта", catalog.selectedProduct);
 console.log(
   "Это вывод продукта, найденного по id",
@@ -18,26 +19,27 @@ console.log(
 );
 //Проверка CartModel и его методов
 const cart = new CartModel();
-cart.putItemsInCart(
-  apiProducts.items[1],
-  apiProducts.items[2],
-  apiProducts.items[3],
-);
+cart.putItemInCart(apiProducts.items[1]);
+cart.putItemInCart(apiProducts.items[2])
+cart.putItemInCart(apiProducts.items[3])
 console.log(
-  "Это проверка функции, способной положить сразу несколько товаров в коризну. Товар с ценой null не положен и вылезла ошибка",
+  "Это проверка функцииположить товар в коризну. Товар с ценой null не положен и вылезла ошибка",
   cart.itemsInCart,
 );
 cart.deleteItemFromCart(cart.itemsInCart[1]);
 console.log("Проверка функции, удаляющей товар", cart.itemsInCart);
 cart.clearCart();
 console.log("Проверка функции, очищающей корзину", cart.itemsInCart);
-cart.putItemsInCart(...apiProducts.items);
+cart.putItemInCart(apiProducts.items[0]);
+cart.putItemInCart(apiProducts.items[1]);
+cart.putItemInCart(apiProducts.items[2]);
+cart.putItemInCart(apiProducts.items[3]);
 console.log(
-  "Проверка функции отображения числа товаров в корзине. Снова вылезет ошибка: товар с ценой null не попадет в корзину",
+  "Проверка функции отображения числа товаров в корзине. Снова вылезет ошибка: товар с ценой null не попадет в корзину. Товаров в корзине:",
   cart.productsCount(),
 );
 console.log(
-  "Проверка функции, отображающей общую стоимость товаров в корзине",
+  "Проверка функции, отображающей общую стоимость товаров в корзине. Общая сумма заказа:",
   cart.totalPrice(),
 );
 console.log(
@@ -79,9 +81,31 @@ console.log(
 );
 console.log(
   "Отдельный вызов булевого значения, отвечающего за валидность всех данных",
-  customer.isComplete,
+  customer.isComplete
+);
+//Проверка валидации если строки пустые
+customer.customerData = {
+  payment: "",
+  email: "",
+  phone: "",
+  address: "",
+}
+console.log("Проверка функции валидации", customer.validate());
+console.log(
+  "Отдельный вызов массива ошибок валидации",
+  customer.validationErrors,
+);
+console.log(
+  "Отдельный вызов булевого значения, отвечающего за валидность всех данных",
+  customer.isComplete
 );
 //Проверка ApiService
+customer.customerData = {
+  payment: "online",
+  email: "booleanguy@email.com",
+  phone: "8977655443",
+  address: "prosvet 7",
+};
 const api = new Api(API_URL);
 const apiService = new ApiService(api);
 //Функция загрузки товаров, полученных из get-запроса, и сразу помещения их в каталог
@@ -97,10 +121,11 @@ loadProducts();
 //Проверка работы классов с принятыми из сервера данными
 async function workWithServerData() {
   await loadProducts();
-  catalog.selectedProduct = "90973ae5-285c-4b6f-a6d0-65d1d760b102";
+  catalog.selectedProduct = catalog.catalogProducts[5];
   console.log(catalog.selectedProduct);
   cart.clearCart();
-  cart.putItemsInCart(catalog.catalogProducts[5], catalog.catalogProducts[7]);
+  cart.putItemInCart(catalog.catalogProducts[5]);
+  cart.putItemInCart(catalog.catalogProducts[7]);
   console.log(cart.itemsInCart);
   cart.deleteItemFromCart(cart.itemsInCart[1]);
   console.log(cart.itemsInCart);

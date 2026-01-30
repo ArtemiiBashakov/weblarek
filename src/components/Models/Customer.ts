@@ -1,8 +1,5 @@
-import { ICustomer, TPayment } from "../../types";
-interface IValidationResult {
-  isValid: boolean;
-  errors: Record<keyof ICustomer, string>;
-} //Интерфейс для результатов валидации
+import { ICustomer, TPayment, IValidationResult } from "../../types";
+
 
 export class CustomerModel {
   private _customerData: ICustomer = {
@@ -72,19 +69,13 @@ export class CustomerModel {
     if (!this._customerData.email.trim()) {
       errors.email = "Введите email";
       isValid = false;
-    } else if (!this.isValidEmail(this._customerData.email)) {
-      errors.email = "Введите корректный email";
-      isValid = false;
-    }
+    } 
 
     // Валидация телефона
     if (!this._customerData.phone.trim()) {
       errors.phone = "Введите телефон";
       isValid = false;
-    } else if (!this.isValidPhone(this._customerData.phone)) {
-      errors.phone = "Введите корректный телефон";
-      isValid = false;
-    }
+    } 
 
     // Валидация адреса
     if (!this._customerData.address.trim()) {
@@ -93,21 +84,6 @@ export class CustomerModel {
     }
 
     return { isValid, errors };
-  }
-
-  // Проверка валидности email - вспомогательный метод
-  private isValidEmail(email: string): boolean {
-    // console.log('Проверяемый email:', `"${email}"`);
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-
-  // Проверка валидности телефона - вспомогательный метод
-  private isValidPhone(tel: string): boolean {
-    // console.log('Проверяемый tel:', `"${tel}"`);
-    const phoneRegex =
-      /^(\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}$/;
-    return phoneRegex.test(tel);
   }
 
   // Проверка, все ли поля заполнены - вспомогательный метод

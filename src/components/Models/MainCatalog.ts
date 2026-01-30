@@ -4,9 +4,7 @@ export class MainCatalogModel {
   private _catalogProducts: IProduct[] = [];
   private _selectedProduct: IProduct | null = null;
   //Конструктор кладет все товары в поле массива из внешнего источника при инициализации
-  constructor(initialProducts: IProduct[]) {
-    this.catalogProducts = initialProducts;
-  }
+  
   // Сеттер для помещения всех товаров из переданных данных в массив товаров
   set catalogProducts(products: IProduct[]) {
     this._catalogProducts = [...products];
@@ -16,13 +14,13 @@ export class MainCatalogModel {
     return this._catalogProducts;
   }
   //Находит и сохраняет выбранный продукт по id
-  set selectedProduct(productId: string) {
-    const product = this.getProductById(productId);
-    if (product) {
-      this._selectedProduct = product;
-    } else {
-      throw new Error(`Продукт с id ${productId} не найден`);
-    }
+  set selectedProduct(product: IProduct) {
+    if (product.price === null) {
+        console.error(`Товар "${product.title}" не продается`);
+        return; // прерываем обработку ЭТОГО товара
+      } else {
+        this._selectedProduct = product;
+      }
   }
   //Возвращает выбранный продукт
   get selectedProduct(): IProduct | null {

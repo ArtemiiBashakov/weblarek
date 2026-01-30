@@ -8,8 +8,8 @@ export class CartModel {
     return [...this._itemsInCart];
   }
   //Положить один товар в корзину
-  putItemsInCart(...products: IProduct[]): void {
-    products.forEach((product) => {
+  putItemInCart(product: IProduct): void {
+    
       if (product.price === null) {
         console.error(`Товар "${product.title}" не продается`);
         return; // прерываем обработку ЭТОГО товара
@@ -17,14 +17,10 @@ export class CartModel {
       if (!this.hasItem(product.id)) {
         this._itemsInCart.push(product);
       }
-    });
-  }
+    };
+  
   //Удалить товар из корзины
   deleteItemFromCart(selectedProduct: IProduct): IProduct[] {
-    if (!selectedProduct || !selectedProduct.id) {
-      console.error("Неверный товар для удаления");
-      return this.itemsInCart;
-    }
     this._itemsInCart = this._itemsInCart.filter(
       (item) => item.id !== selectedProduct.id,
     );
