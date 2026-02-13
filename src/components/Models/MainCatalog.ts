@@ -1,13 +1,15 @@
 import { IProduct } from "../../types";
-
+import { IEvents } from "../base/Events";
 export class MainCatalogModel {
   private _catalogProducts: IProduct[] = [];
   private _selectedProduct: IProduct | null = null;
-  //Конструктор кладет все товары в поле массива из внешнего источника при инициализации
-  
+  //Конструктор инжектит брокер
+  constructor(private events: IEvents) {}
+
   // Сеттер для помещения всех товаров из переданных данных в массив товаров
   set catalogProducts(products: IProduct[]) {
     this._catalogProducts = [...products];
+    this.events.emit("catalog:changed", { catalog: this._catalogProducts }); // ← СОБЫТИЕ
   }
   //Геттер возвращающий весь массив товаров
   get catalogProducts(): IProduct[] {
@@ -16,11 +18,12 @@ export class MainCatalogModel {
   //Находит и сохраняет выбранный продукт по id
   set selectedProduct(product: IProduct) {
     if (product.price === null) {
-        console.error(`Товар "${product.title}" не продается`);
-        return; // прерываем обработку ЭТОГО товара
-      } else {
-        this._selectedProduct = product;
-      }
+      console.error(`Товар "${product.title}" не продается`);
+      return; // прерываем обработку ЭТОГО товара
+    } else {
+      this._selectedProduct = product;
+      this.events.emit("catalog:selected", { product: this._selectedProduct }); // ← СОБЫТИЕ
+    }
   }
   //Возвращает выбранный продукт
   get selectedProduct(): IProduct | null {

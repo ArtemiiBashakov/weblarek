@@ -1,5 +1,5 @@
 import { ICustomer, TPayment, IValidationResult } from "../../types";
-
+import { IEvents } from "../base/Events";
 
 export class CustomerModel {
   private _customerData: ICustomer = {
@@ -9,9 +9,12 @@ export class CustomerModel {
     address: "",
   };
 
+  constructor(private events: IEvents) {} // ← инжектим брокер
+
   // Сохранение всех данных сразу одним методов, или одного/нескольких за раз, без удаления не переданных в параметры
   set customerData(data: Partial<ICustomer>) {
     this._customerData = { ...this._customerData, ...data };
+    this.events.emit("customer:changed", { customer: this._customerData }); // ← СОБЫТИЕ
   }
   // Геттер для получения всех данных пользователя. Возвращаем копию
   get customerData(): ICustomer {
@@ -43,10 +46,51 @@ export class CustomerModel {
       phone: "",
       address: "",
     };
+    this.events.emit("customer:changed", { customer: this._customerData });
+    this.events.emit("customer:cleared");
   }
 
-  //Валидация данных одним методом
-  validate(): IValidationResult {
+  // ============ ПРИВАТНЫЕ МЕТОДЫ ВАЛИДАЦИИ ПОЛЕЙ ============
+
+  private validatePayment(): { isValid: boolean; error: string } {
+    if (!this._customerData.payment) {
+      return { isValid: false, error: "Выберите способ оплаты" };
+    }
+    if (
+      this._customerData.payment !== "online" &&
+      this._customerData.payment !== "При получении" &&
+      this._customerData.payment !== "card" &&
+      this._customerData.payment !== "cash"
+    ) {
+      return { isValid: false, error: "Неверный способ оплаты" };
+    }
+    return { isValid: true, error: "" };
+  }
+
+  private validateAddress(): { isValid: boolean; error: string } {
+    if (!this._customerData.address.trim()) {
+      return { isValid: false, error: "Введите адрес" };
+    }
+    return { isValid: true, error: "" };
+  }
+
+  private validateEmail(): { isValid: boolean; error: string } {
+    if (!this._customerData.email.trim()) {
+      return { isValid: false, error: "Введите email" };
+    }
+    return { isValid: true, error: "" };
+  }
+
+  private validatePhone(): { isValid: boolean; error: string } {
+    if (!this._customerData.phone.trim()) {
+      return { isValid: false, error: "Введите телефон" };
+    }
+    return { isValid: true, error: "" };
+  }
+
+  // ============ ЕДИНЫЙ МЕТОД ВАЛИДАЦИИ ============
+
+  validate(fields?: Array<keyof ICustomer>): IValidationResult {
     const errors: Record<keyof ICustomer, string> = {
       payment: "",
       email: "",
@@ -56,43 +100,52 @@ export class CustomerModel {
 
     let isValid = true;
 
-    // Валидация оплаты
-    if (!this._customerData.payment) {
-      errors.payment = "Выберите способ оплаты";
-      isValid = false;
-    } else if (this._customerData.payment !== "online") {
-      errors.payment = "Неверный способ оплаты";
-      isValid = false;
+    // Определяем, какие поля проверять
+    const fieldsToValidate =
+      fields ||
+      (["payment", "email", "phone", "address"] as Array<keyof ICustomer>);
+
+    // Проверяем только нужные поля
+    if (fieldsToValidate.includes("payment")) {
+      const paymentValidation = this.validatePayment();
+      if (!paymentValidation.isValid) {
+        errors.payment = paymentValidation.error;
+        isValid = false;
+      }
     }
 
-    // Валидация email
-    if (!this._customerData.email.trim()) {
-      errors.email = "Введите email";
-      isValid = false;
-    } 
+    if (fieldsToValidate.includes("address")) {
+      const addressValidation = this.validateAddress();
+      if (!addressValidation.isValid) {
+        errors.address = addressValidation.error;
+        isValid = false;
+      }
+    }
 
-    // Валидация телефона
-    if (!this._customerData.phone.trim()) {
-      errors.phone = "Введите телефон";
-      isValid = false;
-    } 
+    if (fieldsToValidate.includes("email")) {
+      const emailValidation = this.validateEmail();
+      if (!emailValidation.isValid) {
+        errors.email = emailValidation.error;
+        isValid = false;
+      }
+    }
 
-    // Валидация адреса
-    if (!this._customerData.address.trim()) {
-      errors.address = "Введите адрес";
-      isValid = false;
+    if (fieldsToValidate.includes("phone")) {
+      const phoneValidation = this.validatePhone();
+      if (!phoneValidation.isValid) {
+        errors.phone = phoneValidation.error;
+        isValid = false;
+      }
     }
 
     return { isValid, errors };
   }
 
-  // Проверка, все ли поля заполнены - вспомогательный метод
+  // Вспомогательные методы (опционально)
   get isComplete(): boolean {
-    const validation = this.validate();
-    return validation.isValid;
+    return this.validate().isValid;
   }
 
-  // Получение только ошибок валидации - вспомогательный метод
   get validationErrors(): Record<keyof ICustomer, string> {
     return this.validate().errors;
   }
