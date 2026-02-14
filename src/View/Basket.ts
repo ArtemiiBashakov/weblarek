@@ -24,6 +24,8 @@ export class Basket extends Component<IBasket> {
       ".basket__button",
       container,
     );
+    //  Блокируем кнопку при создании (корзина пуста)
+    this.setButtonState(false);
 
     this._button.addEventListener("click", () => {
       events.emit("basket:order");
@@ -35,6 +37,8 @@ export class Basket extends Component<IBasket> {
     items.forEach((item) => {
       this._list.appendChild(item);
     });
+    //  Обновляем состояние кнопки в зависимости от наличия товаров
+    this.setButtonState(items.length > 0);
   }
 
   set total(value: number) {
@@ -44,6 +48,13 @@ export class Basket extends Component<IBasket> {
   protected setText(element: HTMLElement, value: string) {
     if (element) {
       element.textContent = value;
+    }
+  }
+
+  //  Новый метод для управления кнопкой
+  setButtonState(enabled: boolean): void {
+    if (this._button) {
+      this._button.disabled = !enabled;
     }
   }
 }

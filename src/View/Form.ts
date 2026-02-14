@@ -37,11 +37,6 @@ export abstract class Form<T> extends Component<T> {
     this.setText(this._errors, value);
   }
 
-  // Метод для очистки формы
-  clear() {
-    this._form.reset();
-  }
-
   protected setText(element: HTMLElement, value: string) {
     if (element) element.textContent = value;
   }

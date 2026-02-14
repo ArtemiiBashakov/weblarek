@@ -34,11 +34,11 @@ export interface IProductsResponse {
   items: IProduct[];
 }
 
-// Интерфейс для данных, которые передаются в postOrder
-export interface IOrderInput {
-  customer: ICustomer; // Данные покупателя
-  cart: IProduct[]; // Товары в корзине
-}
+// // Интерфейс для данных, которые передаются в postOrder
+// export interface IOrderInput {
+//   customer: ICustomer; // Данные покупателя
+//   cart: IProduct[]; // Товары в корзине
+// }
 
 // Данные для отправки заказа
 export interface IOrderRequest {

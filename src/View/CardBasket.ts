@@ -22,16 +22,13 @@ export class CardBasket extends Card<BasketCardData> {
     );
 
     if (actions?.onClick) {
-      this._deleteButton.addEventListener("click", (event) => {
-        actions.onClick?.(event);
+      this._deleteButton.addEventListener("click", () => {
+        actions.onClick?.();
       });
     }
   }
 
   set index(value: number) {
     this.setText(this._index, String(value));
-  }
-  set id(value: string) {
-    this.container.dataset.id = value;
   }
 }

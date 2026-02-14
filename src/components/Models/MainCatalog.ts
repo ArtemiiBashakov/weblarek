@@ -17,13 +17,18 @@ export class MainCatalogModel {
   }
   //Находит и сохраняет выбранный продукт по id
   set selectedProduct(product: IProduct) {
+    // Даже если товар без цены, мы все равно его сохраняем и открываем модалку
+    this._selectedProduct = product;
+
+    // Но добавляем предупреждение в консоль
     if (product.price === null) {
-      console.error(`Товар "${product.title}" не продается`);
-      return; // прерываем обработку ЭТОГО товара
-    } else {
-      this._selectedProduct = product;
-      this.events.emit("catalog:selected", { product: this._selectedProduct }); // ← СОБЫТИЕ
+      console.warn(
+        `Товар "${product.title}" не продается, но его можно посмотреть`,
+      );
     }
+
+    // Всегда эмитим событие для открытия модалки
+    this.events.emit("catalog:selected", { product: this._selectedProduct });
   }
   //Возвращает выбранный продукт
   get selectedProduct(): IProduct | null {

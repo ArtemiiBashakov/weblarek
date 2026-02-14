@@ -22,7 +22,7 @@ import { OrderForm } from "./View/OrderForm";
 import { ContactsForm } from "./View/ContactsForm";
 import { Basket } from "./View/Basket";
 import { Success } from "./View/Success";
-
+import { IOrderRequest } from "./types";
 // Инициализация
 const events = new EventEmitter();
 const api = new Api(API_URL);
@@ -44,12 +44,22 @@ const basketTemplate = ensureElement<HTMLTemplateElement>("#basket");
 const orderTemplate = ensureElement<HTMLTemplateElement>("#order");
 const contactsTemplate = ensureElement<HTMLTemplateElement>("#contacts");
 const successTemplate = ensureElement<HTMLTemplateElement>("#success");
+// ============ СОЗДАНИЕ КОМПОНЕНТОВ ============
+const basket = new Basket(cloneTemplate(basketTemplate), events);
+const preview = new CardPreview(cloneTemplate(cardPreviewTemplate), {
+  onClick: () => events.emit("preview:toggle"),
+}); //  Одно событие для переключения
+const orderForm = new OrderForm(cloneTemplate(orderTemplate), events);
+const contactsForm = new ContactsForm(cloneTemplate(contactsTemplate), events);
+const success = new Success(cloneTemplate(successTemplate), events);
 
-// Подписка на события
+// ПОДПИСКИ НА СОБЫТИЯ
 events.on("catalog:changed", () => {
   const items = catalog.catalogProducts.map((item) => {
     const card = new CardCatalog(cloneTemplate(cardCatalogTemplate), {
-      onClick: () => events.emit("card:select", item),
+      onClick: () => {
+        catalog.selectedProduct = item; // ← модель сама эмитит catalog:selected
+      },
     });
 
     // Добавляем CDN_URL к изображению
@@ -64,75 +74,62 @@ events.on("catalog:changed", () => {
   gallery.render({ catalog: items });
 });
 
+// СОБЫТИЕ ОБНОВЛЕНИЯ КОРЗИНЫ - ПЕРЕСБОРКА СПИСКА
+let processingBasketChange = false;
+//Разрешение тогглинга
+let toggling = false;
+
 events.on("basket:changed", () => {
-  header.counter = cart.productsCount();
-});
-
-events.on("catalog:selected", (data: { product: IProduct }) => {
-  // Можно использовать, например, для аналитики или дополнительных действий
-  console.log("Выбран товар:", data.product.title);
-  // Сейчас это событие уже используется в card:select,
-  // но обработчик можно добавить для расширения функциональности
-});
-
-events.on("customer:changed", () => {
-  // Обновляем валидацию текущей открытой формы
-  if (currentOrderForm) {
-    const validation = customer.validate(["payment", "address"]);
-    currentOrderForm.valid = validation.isValid;
-    currentOrderForm.errors =
-      validation.errors.payment || validation.errors.address || "";
+  // Защита от рекурсии
+  if (processingBasketChange) {
+    return;
   }
 
-  if (currentContactsForm) {
-    const validation = customer.validate(["email", "phone"]);
-    currentContactsForm.valid = validation.isValid;
-    currentContactsForm.errors =
-      validation.errors.email || validation.errors.phone || "";
-  }
-});
+  processingBasketChange = true;
 
-events.on("basket:open", () => {
-  // Создаем корзину
-  const basket = new Basket(cloneTemplate(basketTemplate), events);
-
-  // Создаем карточки товаров для корзины
+  // Обновляем счетчик
+  const count = cart.productsCount();
+  header.counter = count; // ← теперь должно работать
+  // Пересобираем карточки товаров
   const basketItems = cart.itemsInCart.map((item, index) => {
     const card = new CardBasket(cloneTemplate(cardBasketTemplate), {
       onClick: () => {
         events.emit("basket:remove", item);
       },
     });
-    card.id = item.id;
     return card.render({
       title: item.title,
       price: item.price || 0,
       index: index + 1,
     });
   });
-
-  // Устанавливаем товары и общую сумму
+  // Обновляем данные корзины
   basket.render({
     items: basketItems,
     total: cart.totalPrice(),
   });
+  //  Обновляем отображение ТОЛЬКО если открыта корзина, а не Success
+  if (modal.isOpen && document.querySelector(".basket")) {
+    modal.render({ content: basket.render() });
+  }
 
-  // Показываем модалку
-  modal.render({ content: basket.element });
-  modal.open();
+  // Сбрасываем флаг через setTimeout, чтобы избежать рекурсии
+  setTimeout(() => {
+    processingBasketChange = false;
+  }, 0);
 });
 
-// Обработчик выбора карточки товара (детальный просмотр)
-events.on("card:select", (item: IProduct) => {
-  // Создаем карточку предпросмотра
-  const preview = new CardPreview(cloneTemplate(cardPreviewTemplate), {
-    onClick: () => events.emit("card:add", item),
-  });
+events.on("catalog:selected", () => {
+  // Получаем текущий выбранный продукт из модели
+  const item = catalog.selectedProduct;
+  if (!item) return;
 
-  // Настраиваем кнопку (если товар уже в корзине)
+  // Проверяем наличие в корзине
   const isInCart = cart.hasItem(item.id);
-  preview.buttonText = isInCart ? "Уже в корзине" : "В корзину";
-  preview.buttonDisabled = isInCart || item.price === null;
+
+  // Меняем текст кнопки в зависимости от наличия
+  preview.buttonText = isInCart ? "Удалить из корзины" : "В корзину";
+  preview.buttonDisabled = item.price === null; // Бесценные товары всегда заблокированы
 
   // Рендерим данные
   preview.render({
@@ -142,60 +139,78 @@ events.on("card:select", (item: IProduct) => {
   });
 
   // Показываем модалку
-  modal.render({ content: preview.element });
+  modal.render({ content: preview.render() });
   modal.open();
 });
 
-// Обработчик добавления в корзину
-events.on("card:add", (item: IProduct) => {
-  if (item.price !== null) {
+events.on("preview:toggle", () => {
+  if (toggling) return;
+  toggling = true;
+  const item = catalog.selectedProduct;
+  if (!item || item.price === null) return; // Бесценные товары игнорируем
+
+  if (cart.hasItem(item.id)) {
+    // Если товар в корзине - удаляем
+    cart.deleteItemFromCart(item);
+  } else {
+    // Если товара нет в корзине - добавляем
     cart.putItemInCart(item);
-    modal.close(); // Закрываем модалку после добавления
   }
+  // Закрываем модалку после действия
+  modal.close();
+  setTimeout(() => {
+    toggling = false;
+  }, 300);
 });
 
+events.on("customer:changed", () => {
+  const validation = customer.validate();
+
+  // Обновляем валидацию формы заказа (если она открыта)
+  const isOrderValid = !!(customer.payment && customer.address);
+  orderForm.valid = isOrderValid;
+  orderForm.errors =
+    validation.errors.payment || validation.errors.address || "";
+
+  // Обновляем валидацию формы контактов (если она открыта)
+  const isContactsValid = !!(customer.email && customer.phone);
+  contactsForm.valid = isContactsValid;
+  contactsForm.errors =
+    validation.errors.email || validation.errors.phone || "";
+
+});
+// СОБЫТИЕ ОТКРЫТИЯ КОРЗИНЫ - ТОЛЬКО РЕНДЕР
+events.on("basket:open", () => {
+  // Просто рендерим существующий basket с текущими данными
+  modal.render({ content: basket.render() });
+  modal.open();
+});
 // Обработчик удаления из корзины
 // Слушаем СОБЫТИЕ ОТ VIEW (клик по кнопке удаления)
+//  ПРИ УДАЛЕНИИ - только меняем модель, остальное сделает basket:changed
 events.on("basket:remove", (item: IProduct) => {
-  cart.deleteItemFromCart(item); // ← модель сама эмитнет basket:removed
+  cart.deleteItemFromCart(item); // модель сама эмитит basket:changed
 });
-
-// Слушаем СОБЫТИЕ ОТ МОДЕЛИ (товар реально удален)
-events.on("basket:removed", () => {
-  events.emit("basket:open"); // переоткрываем корзину
-});
-
 // Загрузка данных
 apiService
   .getProducts()
   .then((products) => {
     catalog.catalogProducts = products;
-    events.emit("catalog:changed");
   })
   .catch(console.error);
 
-// Храним ссылки на активные формы
-let currentOrderForm: OrderForm | null = null;
-let currentContactsForm: ContactsForm | null = null;
-
 events.on("basket:order", () => {
-  // Создаем форму заказа и СОХРАНЯЕМ ссылку
-  currentOrderForm = new OrderForm(cloneTemplate(orderTemplate), events);
+  // Обновляем данные формы из модели
+  orderForm.payment = customer.payment;
+  orderForm.address = customer.address;
+  // Проверяем валидность на основе данных в модели
+  const isOrderValid = !!(customer.payment && customer.address);
+  
+  orderForm.valid = isOrderValid;
+  orderForm.errors = isOrderValid ? "" : "Заполните все поля";
 
-  // Устанавливаем текущие значения из модели
-  if (customer.payment) {
-    currentOrderForm.payment = customer.payment;
-  }
-  if (customer.address) {
-    currentOrderForm.address = customer.address;
-  }
-
-  // Проверяем валидность данных
-  currentOrderForm.valid = false; // Явно выключаем кнопку
-  currentOrderForm.errors = ""; // Очищаем ошибки
-
-  // Показываем модалку
-  modal.render({ content: currentOrderForm.element });
+  // Показываем модалку с существующей формой
+  modal.render({ content: orderForm.render() });
   modal.open();
 });
 
@@ -203,73 +218,45 @@ events.on("basket:order", () => {
 
 // Обработчик изменения способа оплаты
 events.on("order.payment:change", (data: { payment: string }) => {
-  // Преобразуем card → online, cash → При получении
   let paymentValue: TPayment;
   if (data.payment === "card") paymentValue = "online";
   else if (data.payment === "cash") paymentValue = "При получении";
   else paymentValue = data.payment as TPayment;
 
   customer.customerData = { payment: paymentValue };
-
-  //  Используем validateOrder() - проверяем ТОЛЬКО payment и address!
-  const validation = customer.validate(["payment", "address"]);
-  events.emit("order:validate", {
-    isValid: validation.isValid,
-    errors: validation.errors,
-  });
 });
 
 events.on("order.address:change", (data: { address: string }) => {
   customer.customerData = { address: data.address };
-
-  //  Используем validateOrder() - проверяем ТОЛЬКО payment и address!
-  const validation = customer.validate(["payment", "address"]);
-  events.emit("order:validate", {
-    isValid: validation.isValid,
-    errors: validation.errors,
-  });
 });
 
 events.on("order:validate", (data: { isValid: boolean; errors: any }) => {
-  if (currentOrderForm) {
-    currentOrderForm.valid = data.isValid;
-
+  if (orderForm) {
+    orderForm.valid = data.isValid;
     // Показываем ошибку для текущей формы
     const error = data.errors.payment || data.errors.address || "";
-    currentOrderForm.errors = error;
+    orderForm.errors = error;
   }
 });
 
 // Обработчик отправки формы заказа
 events.on("order:submit", () => {
-  if (!currentOrderForm) return;
-
-  // Переход к форме контактов
-  currentContactsForm = new ContactsForm(
-    cloneTemplate(contactsTemplate),
-    events,
-  );
-
-  // Устанавливаем текущие значения из модели
-  if (customer.email) {
-    currentContactsForm.email = customer.email;
-  }
-  if (customer.phone) {
-    currentContactsForm.phone = customer.phone;
-  }
-
-  // Проверяем валидность данных
+  // Обновляем данные формы контактов из модели
+  contactsForm.email = customer.email;
+  contactsForm.phone = customer.phone;
+  // Проверяем валидность на основе данных в модели
   const isValid = !!(customer.email && customer.phone);
-  currentContactsForm.valid = isValid;
-
-  modal.render({ content: currentContactsForm.element });
+  
+  contactsForm.valid = isValid;
+  contactsForm.errors = isValid ? "" : "Заполните все поля";
+  modal.render({ content: contactsForm.render() });
   modal.open();
 });
 
 // Обработчик валидации формы контактов
 events.on("contacts:validate", (data: { isValid: boolean }) => {
-  if (currentContactsForm) {
-    currentContactsForm.valid = data.isValid;
+  if (contactsForm) {
+    contactsForm.valid = data.isValid;
   }
 });
 
@@ -278,85 +265,74 @@ events.on("contacts:validate", (data: { isValid: boolean }) => {
 // Обработчик изменения email
 events.on("contacts.email:change", (data: { email: string }) => {
   customer.customerData = { email: data.email };
-
+  const isContactsValid = !!(customer.email && customer.phone);
   //  Используем validateContacts() - проверяем ТОЛЬКО email и phone!
-  const validation = customer.validate(["email", "phone"]);
+  const validation = customer.validate();
   events.emit("contacts:validate", {
-    isValid: validation.isValid,
+    isValid: isContactsValid,
     errors: validation.errors,
   });
 });
 
 events.on("contacts.phone:change", (data: { phone: string }) => {
   customer.customerData = { phone: data.phone };
-
+  const isContactsValid = !!(customer.email && customer.phone);
   //  Используем validateContacts() - проверяем ТОЛЬКО email и phone!
-  const validation = customer.validate(["email", "phone"]);
+  const validation = customer.validate();
   events.emit("contacts:validate", {
-    isValid: validation.isValid,
+    isValid: isContactsValid,
     errors: validation.errors,
   });
 });
 
 events.on("contacts:validate", (data: { isValid: boolean; errors: any }) => {
-  if (currentContactsForm) {
-    currentContactsForm.valid = data.isValid;
+  if (contactsForm) {
+    contactsForm.valid = data.isValid;
 
     // Показываем ошибку для текущей формы
     const error = data.errors.email || data.errors.phone || "";
-    currentContactsForm.errors = error;
+    contactsForm.errors = error;
   }
 });
 
 // Обработчик отправки формы контактов (ФИНАЛЬНЫЙ ШАГ)
 events.on("contacts:submit", async () => {
-  const validation = customer.validate();
-  if (!validation.isValid) {
-    // Показываем первую ошибку
-    const firstError = Object.values(validation.errors).find(
-      (err) => err !== "",
-    );
-    if (currentContactsForm) {
-      currentContactsForm.errors = firstError || "Заполните все поля";
-    }
-    return; // НЕ отправляем заказ!
-  }
   try {
-    // Отправляем заказ
-    const orderResponse = await apiService.postOrder({
-      customer: {
-        payment: customer.payment,
-        email: customer.email,
-        phone: customer.phone,
-        address: customer.address,
-      },
-      cart: cart.itemsInCart,
-    });
+    const availableItems = cart.itemsInCart.filter(
+      (item) => item.price !== null,
+    );
 
-    const success = new Success(cloneTemplate(successTemplate), events);
-    success.total = orderResponse.total;
+    if (availableItems.length === 0) {
+      throw new Error("В корзине нет доступных для покупки товаров");
+    }
 
-    modal.render({ content: success.element });
-    modal.open();
+    const total = availableItems.reduce((sum, item) => sum + item.price!, 0);
+    const itemIds = availableItems.map((item) => item.id);
 
-    // Очищаем корзину и данные покупателя
-    cart.clearCart();
-    customer.customerData = {
-      payment: "",
-      email: "",
-      phone: "",
-      address: "",
+    const orderData: IOrderRequest = {
+      payment: customer.payment,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      total: total,
+      items: itemIds,
     };
 
-    events.emit("basket:changed");
+    // Отправляем заказ
+    const orderResponse = await apiService.postOrder(orderData);
+    //  СНАЧАЛА показываем Success
+    success.total = orderResponse.total;
+
+    modal.render({ content: success.render() });
+    modal.open();
+
+    //  ПОТОМ очищаем данные (после того как Success уже показан)
+    //  Очищаем данные через методы, а не прямой установкой
+    cart.clearCart(); // модель эмитит basket:changed
+    customer.clearCustomerData();
   } catch (error) {
+    // Просто выводим ошибку в консоль
     console.error("Ошибка оформления заказа:", error);
-    // Показываем ошибку в форме
-    const contacts = document.querySelector('.form[name="contacts"]');
-    if (contacts) {
-      const contactsForm = new ContactsForm(contacts as HTMLElement, events);
-      contactsForm.errors = "Не удалось оформить заказ. Попробуйте позже.";
-    }
   }
 });
 

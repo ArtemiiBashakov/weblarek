@@ -18,18 +18,16 @@ export class CartModel {
     if (!this.hasItem(product.id)) {
       this._itemsInCart.push(product);
       this.events.emit("basket:changed", { cart: this._itemsInCart }); // ← СОБЫТИЕ
-      this.events.emit("basket:added", { product }); // ← опционально
     }
   }
 
   //Удалить товар из корзины
-  deleteItemFromCart(selectedProduct: IProduct): IProduct[] {
+  deleteItemFromCart(selectedProduct: IProduct): void {
     this._itemsInCart = this._itemsInCart.filter(
       (item) => item.id !== selectedProduct.id,
     );
     this.events.emit("basket:changed", { cart: this._itemsInCart }); // ← СОБЫТИЕ
-    this.events.emit("basket:removed", { selectedProduct }); // ← опционально
-    return this.itemsInCart; // геттер
+    console.trace();
   }
 
   //Очистить корзину
@@ -40,9 +38,7 @@ export class CartModel {
   }
   //Общее число товаров в корзине
   productsCount(): number {
-    const count = this._itemsInCart.length; // Сначала считаем
-    // this.events.emit('basket:changed', { cart: this._itemsInCart}); // ← СОБЫТИЕ
-    return count;
+    return this._itemsInCart.length; // Сначала считаем
   }
   // Общая сумма товаров в корзине
   totalPrice(): number {
@@ -51,12 +47,10 @@ export class CartModel {
       0,
     );
   }
-  //Поиск товара в корзине по id
-  getItemById(productId: string): IProduct | null {
-    return this._itemsInCart.find((item) => item.id === productId) || null;
-  }
+
   // Проверка наличия продукта в корзине по id позвращает булевое значение
   hasItem(productId: string): boolean {
-    return this._itemsInCart.some((item) => item.id === productId);
+    const exists = this._itemsInCart.some((item) => item.id === productId);
+    return exists;
   }
 }

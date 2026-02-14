@@ -153,11 +153,10 @@ CartModel - класс, описывающий выбранные покупат
 Содержит методы:
 `get itemsInCart():IProduct[]` - геттер - добавляет в массив товар типа массив обьектов IProduct;
 `putItemInCart (selectedProduct: IProduct): void` - кладет обьект или типа IProducts в массив \_itemsInCart, проверяя по id есть ли он уже с помощью метода hasItem, и можно ли его купить (price !== null);
-`deleteItemFromCart (selectedProduct: IProduct): IProduct[]` - удаляет из массива \_itemsInCart обьект продукта, отфильтровывая его с помощью .filter и возвращая отфильтрованный массив;
+`deleteItemFromCart (selectedProduct: IProduct): void` - удаляет из массива \_itemsInCart обьект продукта, отфильтровывая его с помощью .filter.
 `clearCart(): void` - очистить массив \_itemsInCart, удаляя из него все товары;
 `productsCount (): number` - возвращает общее число всех товаров в массиве \_itemsInCart;
 `totalPrice ():number` - вывести общую сумму всех товаров в корзине, суммируя поля price всех обьектов в \_itemsInCart с помощью reduceж;
-`getItemById(productId: string): IProduct | null` - возвращает обьект из массива \_itemsInCart по его id, или null если не нашел, с помощью функции .find;
 `hasItem` - метод проверяющий наличие обьекта в массиве \_itemsInCart, в отличие от getItemById возвращает булевое значение.
 
 CustomerModel - класс, описывающий и сохраняющий данные о пользователе, что были введены в форме оформления заказа.
@@ -171,7 +170,7 @@ CustomerModel - класс, описывающий и сохраняющий д�
 `get email()` - отдельный геттер для поля email;
 `get phone()` - отдельный геттер для поля phone;
 `get address()` - отдельный геттер для поля address;
-`clearСustomerData(): void` - очистка поля \_customerData, удаление всех данных пользователя;
+`clearCustomerData(): void` - очистка поля \_customerData, удаление всех данных пользователя;
 `validate(): IValidationResult` - содержит внутри циклы для проверки для проверки всех полей сразу, и вспомогательные приватные методы для этого.
 `get isComplete(): boolean` - выводит булевую часть возвращаемого методом validate() обьекта, говорящую все ли данные пользователя правильно введены
 `get validationErrors(): Record<keyof ICustomer, string>` - выводит обьект типа IValidationResults, содержащий сообщения о неверно введенных полях.
@@ -189,14 +188,13 @@ CustomerModel - класс, описывающий и сохраняющий д�
 
 Содержит методы:
 `getProducts` - получает от Api данные типа IProductResponse и возвращает .items - массив товаров
-`postOrder` - принимает данные типа IOrderInput в функции sendOrderExample(), использует вспомогательный метод prepareOrderData, который обрабатывает данные и готовит запрос на сервер типа IOrderRequest
-`prepareOrderData` - вспомогательный метод, который превращает данные IOrderInput в IOrderRequest, а также фильтрует их и готовит общую сумму заказа(total) и массив id товаров(itemsId), которые затем уже используются в post-запросе
+`postOrder` - принимает данные типа IOrderRequest и отправляет их на сервер 
 
-ApiService инициализируется в main.ts и используется в функциях loadProducts() и sendOrderExample() там же.
 
 **####### Слой Представления**
 
 Слой представления отвечает за отображение данных на странице и взаимодействие с пользователем. Все классы представления наследуются от базового класса Component и используют брокер событий EventEmitter для коммуникации с презентером. Описан классами: Component(базовый для всех абстрактный), Card и Form (абстрактные классы для разных карточек и форм соответственно), Header, Gallery и Modal(Компоненты представления), CardCatalog, CardPreview, CardBasket(карточки товаров в разных местах), OrderForm, ContactsForm(2 формы для заказа), Basket(отрисовывает корзину), Success(Успех при оформлении заказа). Итого 13 классов.
+Все компоненты представления (Basket, CardPreview, OrderForm, ContactsForm, Success) создаются **один раз** при инициализации приложения, а не при каждом открытии. При открытии используется метод `render()` для обновления содержимого.
 
 **Класс Component**
 Базовый абстрактный класс для всех компонентов интерфейса. Содержит базовые методы для работы с DOM и рендеринга.
@@ -204,7 +202,6 @@ ApiService инициализируется в main.ts и используетс
 Методы:
 `setImage(element: HTMLImageElement, src: string, alt?: string)` - устанавливает изображение с альтернативным текстом.
 `render(data?: Partial<T>): HTMLElement` - важный класс для рендера всех обьекто представления. Принимает опциональные данные частичного типа T, копирует все поля из data в текущий объект (this), и возвращает корневой DOM-элемент компонента.
-`get element(): HTMLElement` - Публичный геттер для доступа к корневому элементу.
 
 **Класс Card (абстрактный)**
 Базовый класс для всех типов карточек товара. Содержит общие элементы и логику для отображения информации о товаре.
@@ -234,7 +231,6 @@ ApiService инициализируется в main.ts и используетс
 Методы:
 `set valid(value: boolean)` - управляет доступностью кнопки отправки
 `set errors(value: string)` - устанавливает текст ошибки
-`clear()` - очищает поля формы
 `protected setText(element: HTMLElement, value: string)` - утилитарный метод для установки текста
 События:
 `this._form.addEventListener('submit', (e) =>...` - при сабмите формы генерируется событие `${this._form.name}:submit`.
@@ -277,6 +273,8 @@ ApiService инициализируется в main.ts и используетс
 Интерфейс данных:
 `type CatalogCardData` - содержит id, название, изображение, категорию, цену. В кажом специфическом классе отображени карточки разные интерфейсы, т.к. отображаемые данные тоже разные
 `constructor(container: HTMLElement, actions?: ICardActions)` - принимает контейнер карточки и опциональный объект с действиями.
+Поля:
+
 Методы:
 `set id(value: string)` - устанавливает id товара в data-атрибут
 `get id(): string` - получает id из data-атрибута
@@ -285,6 +283,10 @@ ApiService инициализируется в main.ts и используетс
 
 **CardPreview (Карточка детального просмотра)**
 Отображает подробную информацию о товаре в модальном окне.
+Поля:
+`_image: HTMLImageElement` - элемент с изображением 
+`_category: HTMLElement` - элемент с категорией 
+`buttonText: string` - текст на кнопке
 Интерфейс данных:
 `type PreviewCardData` - содержит id, название, изображение, категорию, цену, и описание.
 `constructor(container: HTMLElement, actions?: ICardActions)` - принимает контейнер карточки и опциональный объект с действиями.
@@ -337,7 +339,8 @@ ApiService инициализируется в main.ts и используетс
 `_list: HTMLElement` - контейнер для списка товаров
 `_total: HTMLElement` - элемент для отображения общей суммы
 `_button: HTMLButtonElement` - кнопка оформления заказа
-Сеттеры:
+Методы:
+`setButtonState(enabled: boolean): void` - блокирует или разблокирует кнопку "Оформить" в зависимости от наличия товаров в корзине.
 `set items(items: HTMLElement[])` - отображает карточки товаров
 `set total(value: number)` - отображает общую сумму
 События:
@@ -360,16 +363,15 @@ catalog:changed - генерируется в `MainCatalogModel (set catalogProd
 catalog:selected - генерируется в `MainCatalogModel (set selectedProduct)` при выборе товара для детального просмотра. Передается { product: IProduct }
 basket:changed - генерируется в `CartModel (putItemInCart, deleteItemFromCart, clearCart)` при любом изменении состава корзины. Передается { cart: IProduct[] }
 basket:added - генерируется в `CartModel (putItemInCart)` при добавлении товара в корзину. Передается { product: IProduct }
-basket:removed - генерируется в `CartModel (deleteItemFromCart)` при удалении товара из корзины. Передается { selectedProduct: IProduct }
 basket:cleared - генерируется в `CartModel (clearCart)` при полной очистке корзины. Ничего не передается
 customer:changed - генерируется в `CustomerModel (set customerData, clearСustomerData)` при любом изменении данных покупателя. Передается { customer: ICustomer }
 customer:cleared - генерируется в `CustomerModel (clearСustomerData)` при очистке данных покупателя .Ничего не передается.
+preview:toggle - генерируется в `Презентере` при клике на кнопку в CardPreview
 **События представлений (действия пользователя)**
 basket:open - генерируется в `Header`(клик по иконке корзины) - при клике на кнопку корзины в шапке. Ничего не передается
 basket:order - генерируется в `Basket`(клик по кнопке "Оформить") - при оформлении заказа из корзины. Ничего не передается
 basket:remove - генерируется в `Презентере` при клике на кнопку удаления в CardBasket - при удалении товара из корзины. Передается `item: IProduct`
 card:select - генерируется в `Презентере` при клике на карточку в CardCatalog - ри выборе товара для просмотра. Передается `item: IProduct`
-card:add - генерируется в `Презентере` при клике на кнопку в CardPreview - при добавлении товара в корзину. Передается `item: IProduct`
 order.payment:change - генерируется в `OrderForm`(клик по кнопке оплаты) - при выборе способа оплаты. Передается `{ payment: string }`
 order.address:change - генерируется в `OrderForm`(input в поле адреса) - при вводе адреса доставки. Передается `{ address: string }`
 order:validate - генерируется в `Презентере` после изменения payment/address - для обновления состояния кнопки "Далее". Передается `{ isValid: boolean, errors: any }`
@@ -417,17 +419,20 @@ modal:close - генерируется в `Modal`(close) -при закрыти�
     })
     .catch(console.error);`
 **Обработка событий**
+Презентер не генерирует события самостоятельно. При изменении данных он только вызывает методы моделей, а модели сами эмитят события. Например:
+- `catalog.selectedProduct = item` → модель эмитит `catalog:selected`
+- `cart.putItemInCart(item)` → модель эмитит `basket:changed`
+- `customer.customerData = {...}` → модель эмитит `customer:changed`
 Презентер подписывается на все события и реализует логику приложения:
 
 1. Обработка событий моделей
    `catalog:changed` - Перерисовка галереи товаров на главной странице
    `basket:changed` - Обновление счетчика товаров в шапке сайта
-   `basket:removed` - Переоткрытие корзины с обновленным содержимым
    `customer:changed` - Обновление валидации активной формы
 2. Обработка действий пользователя (события View)
+   `preview:toggle` - Добавление/удаление товара из корзины
    `basket:open` Создание и отображение корзины
    `card:select` Открытие модального окна с деталями товара
-   `card:add` Добавление товара в корзину
    `basket:remove` Удаление товара из корзины
    `basket:order` Открытие формы заказа (адрес/оплата)
    `order.payment:change` Обновление данных оплаты в модели

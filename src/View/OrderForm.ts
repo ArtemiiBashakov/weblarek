@@ -47,8 +47,15 @@ export class OrderForm extends Form<IOrderForm> {
 
   // Только СЕТТЕРЫ для обновления отображения из Model
   set payment(value: string) {
+    // Преобразуем значение из модели в имя кнопки
+    let buttonName = "";
+    if (value === "online") buttonName = "card";
+    else if (value === "При получении") buttonName = "cash";
+    else buttonName = value;
+
     this._paymentButtons.forEach((button) => {
-      button.classList.toggle("button_alt-active", button.name === value);
+      const shouldBeActive = button.name === buttonName;
+      button.classList.toggle("button_alt-active", shouldBeActive);
     });
   }
 

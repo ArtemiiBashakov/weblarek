@@ -25,7 +25,7 @@ export abstract class Component<T> {
   }
 
   // Публичный геттер для доступа к корневому элементу
-  get element(): HTMLElement {
-    return this.container;
-  }
+  // get element(): HTMLElement {
+  //   return this.container;
+  // }
 }

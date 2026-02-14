@@ -39,7 +39,7 @@ export class CustomerModel {
   }
 
   //Очистка всех полей данных пользователя
-  clearСustomerData(): void {
+  clearCustomerData(): void {
     this._customerData = {
       payment: "",
       email: "",
@@ -88,9 +88,8 @@ export class CustomerModel {
     return { isValid: true, error: "" };
   }
 
-  // ============ ЕДИНЫЙ МЕТОД ВАЛИДАЦИИ ============
-
-  validate(fields?: Array<keyof ICustomer>): IValidationResult {
+  // ============ ЕДИНЫЙ МЕТОД ВАЛИДАЦИИ (БЕЗ ПАРАМЕТРОВ) ============
+  validate(): IValidationResult {
     const errors: Record<keyof ICustomer, string> = {
       payment: "",
       email: "",
@@ -100,48 +99,35 @@ export class CustomerModel {
 
     let isValid = true;
 
-    // Определяем, какие поля проверять
-    const fieldsToValidate =
-      fields ||
-      (["payment", "email", "phone", "address"] as Array<keyof ICustomer>);
-
-    // Проверяем только нужные поля
-    if (fieldsToValidate.includes("payment")) {
-      const paymentValidation = this.validatePayment();
-      if (!paymentValidation.isValid) {
-        errors.payment = paymentValidation.error;
-        isValid = false;
-      }
+    // Проверяем ВСЕ поля из this._customerData
+    const paymentValidation = this.validatePayment();
+    if (!paymentValidation.isValid) {
+      errors.payment = paymentValidation.error;
+      isValid = false;
     }
 
-    if (fieldsToValidate.includes("address")) {
-      const addressValidation = this.validateAddress();
-      if (!addressValidation.isValid) {
-        errors.address = addressValidation.error;
-        isValid = false;
-      }
+    const addressValidation = this.validateAddress();
+    if (!addressValidation.isValid) {
+      errors.address = addressValidation.error;
+      isValid = false;
     }
 
-    if (fieldsToValidate.includes("email")) {
-      const emailValidation = this.validateEmail();
-      if (!emailValidation.isValid) {
-        errors.email = emailValidation.error;
-        isValid = false;
-      }
+    const emailValidation = this.validateEmail();
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.error;
+      isValid = false;
     }
 
-    if (fieldsToValidate.includes("phone")) {
-      const phoneValidation = this.validatePhone();
-      if (!phoneValidation.isValid) {
-        errors.phone = phoneValidation.error;
-        isValid = false;
-      }
+    const phoneValidation = this.validatePhone();
+    if (!phoneValidation.isValid) {
+      errors.phone = phoneValidation.error;
+      isValid = false;
     }
 
     return { isValid, errors };
   }
 
-  // Вспомогательные методы (опционально)
+  // Вспомогательные методы
   get isComplete(): boolean {
     return this.validate().isValid;
   }
