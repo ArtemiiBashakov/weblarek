@@ -37,8 +37,4 @@ export class CardCatalog extends Card<CatalogCardData> {
       );
     });
   }
-
-  set id(value: string) {
-    this.container.dataset.id = value;
-  }
 }

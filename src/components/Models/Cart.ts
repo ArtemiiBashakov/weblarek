@@ -18,6 +18,8 @@ export class CartModel {
     if (!this.hasItem(product.id)) {
       this._itemsInCart.push(product);
       this.events.emit("basket:changed", { cart: this._itemsInCart }); // ← СОБЫТИЕ
+    } else {
+      console.log("Товар уже в корзине, не добавляем");
     }
   }
 
@@ -27,7 +29,7 @@ export class CartModel {
       (item) => item.id !== selectedProduct.id,
     );
     this.events.emit("basket:changed", { cart: this._itemsInCart }); // ← СОБЫТИЕ
-    console.trace();
+    // console.trace();
   }
 
   //Очистить корзину

@@ -26,7 +26,7 @@ export interface ICustomer {
   address: string;
 }
 
-export type TPayment = "online" | "При получении"|"";
+export type TPayment = "online" | "При получении" | "";
 
 // Ответ сервера с товарами
 export interface IProductsResponse {
@@ -58,19 +58,20 @@ export interface IOrderResponse {
 
 export interface IValidationResult {
   isValid: boolean;
-  errors: Record<keyof ICustomer, string>;
+  errors: {
+    payment: string;
+    email: string;
+    phone: string;
+    address: string;
+  };
 } //Интерфейс для результатов валидации
 
-// export interface IForm {
-//     valid: boolean;
-//     errors: string[];
-// }
 export interface IOrderForm {
-    payment: TPayment;
-    address: string;
+  payment: TPayment;
+  address: string;
 }
 
 export interface IContactsForm {
-    email: string;
-    phone: string;
+  email: string;
+  phone: string;
 }

@@ -90,7 +90,7 @@ export class CustomerModel {
 
   // ============ ЕДИНЫЙ МЕТОД ВАЛИДАЦИИ (БЕЗ ПАРАМЕТРОВ) ============
   validate(): IValidationResult {
-    const errors: Record<keyof ICustomer, string> = {
+    const errors = {
       payment: "",
       email: "",
       phone: "",

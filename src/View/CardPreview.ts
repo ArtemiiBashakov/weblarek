@@ -27,7 +27,11 @@ export class CardPreview extends Card<PreviewCardData> {
     this._button = ensureElement<HTMLButtonElement>(".card__button", container);
 
     if (actions?.onClick) {
-      this._button.addEventListener("click", actions.onClick);
+      const onClickHandler = actions.onClick; //
+      this._button.addEventListener("click", (e) => {
+        e.stopPropagation(); //Исправление ошибки двойного вызова при клике (в Card и CardPreview)
+        onClickHandler(); //  TS теперь уверен, что это функция
+      });
     }
   }
 
